@@ -1,12 +1,9 @@
 package main
 
-import (
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
-)
+//import database and webserver
 
 func main() {
-	r := chi.NewRouter()
-	r.Use(middleware.Logger)
-	r.ListenAndServe("localhost:8000", r)
+	//init databse
+
+	//pass database connection to new webserver
 }
