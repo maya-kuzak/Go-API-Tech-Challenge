@@ -3,13 +3,23 @@
 package webserver
 
 import (
-	"github.com/go-chi/chi"
-	"github.com/go-chi/chi/middleware"
+	"log"
+	"net/http"
+
+	"gorm.io/gorm"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 )
 
-func NewServer() {
+func NewServer(db *gorm.DB) {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 
-	r.ListenAndServe("localhost:8000", r)
+	log.Print("\nStarting server on port :8000\n")
+	err := http.ListenAndServe("localhost:8000", r)
+	if err != nil {
+		log.Fatal("Listen and server error: ", err)
+	}
+
 }
