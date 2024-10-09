@@ -2,19 +2,25 @@
 package models
 
 type Person struct {
-	ID        uint   `gorm:"primaryKey;autoIncrement" json: "id"`
-	FirstName string `gorm:"not null" json: "first_name"`
-	LastName  string `gorm:"not null" json: "last_name"`
-	Type      string `gorm:"not null" validate:"oneof=professor student" json: "type"` //only 'student' or 'professor'
-	Age       uint   `gorm:"not null" json: "age"`
+	ID        uint   `json: "id"`
+	FirstName string `json: "first_name"`
+	LastName  string `json: "last_name"`
+	Type      string `json: "type"` //only 'student' or 'professor'
+	Age       uint   `json: "age"`
+}
+
+// included courses
+// have to be created bc separate databases, but one schema in api calls
+type CompletePerson struct {
+	ID        uint   `json: "id"`
+	FirstName string `json: "first_name"`
+	LastName  string `json: "last_name"`
+	Type      string `json: "type"` //only 'student' or 'professor'
+	Age       uint   `json: "age"`
+	Courses   []uint `json: "courses"`
 }
 
 // set table name
 func (Person) TableName() string {
 	return "person"
 }
-
-// type PersonCourse struct {
-// 	Person
-// 	Courses []int `gorm:"many2many:person_course" json:"courses"`
-// }

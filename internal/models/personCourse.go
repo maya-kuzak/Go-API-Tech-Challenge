@@ -2,8 +2,8 @@
 package models
 
 type PersonCourse struct {
-	PersonID uint `gorm:"not null" json:"person_id"`
-	CourseID uint `gorm:"not null" json:"person_id"`
+	PersonID uint `json:"person_id"`
+	CourseID uint `json:"person_id"`
 }
 
 // set table name

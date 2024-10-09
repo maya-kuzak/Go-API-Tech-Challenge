@@ -3,18 +3,16 @@
 package database
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"os"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/joho/godotenv"
-	"github.com/maya-kuzak/Go-API-Tech-Challenge/internal/models"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
 )
 
-func Init() (*gorm.DB, error) {
+func Init() (*sql.DB, error) {
 
 	err := godotenv.Load()
 	if err != nil {
@@ -31,17 +29,31 @@ func Init() (*gorm.DB, error) {
 
 	//dsn - data source name
 	//postgres://user:password@host:port/dbname?sslmode=disable
-	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable", dbHost, dbUser, dbPassword, dbName, dbPort)
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", dbUser, dbPassword, dbHost, dbPort, dbName)
+	conn, err := sql.Open("pgx", dsn)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to connect to database: %w", err)
+		log.Fatalf("Unable to connect to database: %v", err)
+	}
+
+	// Verify the connection
+	err = conn.Ping()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Unable to ping database: %v\n", err)
+		os.Exit(1)
 	}
 
 	log.Println("Database connection established")
 
-	err = db.AutoMigrate(&dbName, &models.Person{}, &models.Course{}, &models.PersonCourse{})
+	sqlFile, err := os.ReadFile("db_seed.sql")
 	if err != nil {
-		log.Fatal("Could not auto migrate", err)
+		log.Fatal("Error reading sql file: ", err)
 	}
-	return db, nil
+
+	_, err = conn.Exec(string(sqlFile))
+	if err != nil {
+		log.Fatal("Error executing sql file: ", err)
+	}
+	log.Println("Database seeded successfully")
+
+	return conn, nil
 }
