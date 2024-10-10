@@ -7,12 +7,11 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/maya-kuzak/Go-API-Tech-Challenge/internal/models"
 )
 
 // Return all Person objects from the database.
 func (h *RequestHandler) GetAllPeople(w http.ResponseWriter, r *http.Request) {
-	var people []models.CompletePerson
+	var people []CompletePerson
 
 	//get query params
 	name := r.URL.Query().Get("name")
@@ -43,30 +42,30 @@ func (h *RequestHandler) GetAllPeople(w http.ResponseWriter, r *http.Request) {
 	//get person data
 	rows, err := h.DB.Query(query, args...)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Error querying person data: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	//insert person data into people slice
 	for rows.Next() {
-		var person models.CompletePerson
+		var person CompletePerson
 		err := rows.Scan(&person.ID, &person.FirstName, &person.LastName, &person.Type, &person.Age)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, "Error scanning person data: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 
 		//find courses for each person
 		courseRows, err := h.DB.Query("SELECT course_id FROM person_course WHERE person_id = $1", person.ID)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, "Error querying courses for person ID: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 		for courseRows.Next() {
 			var courseID uint
 			err := courseRows.Scan(&courseID)
 			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+				http.Error(w, "Error scanning course data for person ID"+err.Error(), http.StatusInternalServerError)
 				return
 			}
 			person.Courses = append(person.Courses, courseID)
@@ -76,14 +75,14 @@ func (h *RequestHandler) GetAllPeople(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(people); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Error encoding response to JSON: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 }
 
 // Return a given Person from the database.
 func (h *RequestHandler) GetPerson(w http.ResponseWriter, r *http.Request) {
-	var person models.CompletePerson
+	var person CompletePerson
 
 	//get query params
 	fullName := chi.URLParam(r, "name")
@@ -131,7 +130,7 @@ func (h *RequestHandler) GetPerson(w http.ResponseWriter, r *http.Request) {
 
 // Update a given Person in the database based on name.
 func (h *RequestHandler) UpdatePerson(w http.ResponseWriter, r *http.Request) {
-	var updatedPerson models.CompletePerson
+	var updatedPerson CompletePerson
 
 	// Parse the JSON request body
 	if err := json.NewDecoder(r.Body).Decode(&updatedPerson); err != nil {
@@ -214,7 +213,7 @@ func (h *RequestHandler) UpdatePerson(w http.ResponseWriter, r *http.Request) {
 
 // Create a new Person in the database.
 func (h *RequestHandler) CreatePerson(w http.ResponseWriter, r *http.Request) {
-	var newPerson models.CompletePerson
+	var newPerson CompletePerson
 
 	// Parse the JSON request body
 	if err := json.NewDecoder(r.Body).Decode(&newPerson); err != nil {
