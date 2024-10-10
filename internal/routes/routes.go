@@ -2,8 +2,6 @@
 package routes
 
 import (
-	"net/http"
-
 	"github.com/go-chi/chi/v5"
 	"github.com/maya-kuzak/Go-API-Tech-Challenge/internal/handlers"
 )
@@ -17,17 +15,10 @@ func GetRoutes(r chi.Router, handler *handlers.RequestHandler) {
 	r.Delete("/api/course/{id}", handler.DeleteCourse)
 
 	// person routes
-	r.Get("/api/person", handler.GetAllPeople)
-	r.Get("/api/person/{name}", getPerson)
-	r.Put("/api/person/{name}", updatePerson)
-	r.Post("/api/person", createPerson)
-	r.Delete("/api/person/{name}", deletePerson)
+	r.Get("/api/person", handler.GetAllPeople)     //takes querys of name (first or last) and age
+	r.Get("/api/person/{name}", handler.GetPerson) // name = first + ' ' + last
+	r.Put("/api/person/{name}", handler.UpdatePerson)
+	r.Post("/api/person", handler.CreatePerson)
+	r.Delete("/api/person/{name}", handler.DeletePerson)
 
 }
-
-// Placeholder handler functions
-
-func getPerson(w http.ResponseWriter, r *http.Request)    {}
-func updatePerson(w http.ResponseWriter, r *http.Request) {}
-func createPerson(w http.ResponseWriter, r *http.Request) {}
-func deletePerson(w http.ResponseWriter, r *http.Request) {}
