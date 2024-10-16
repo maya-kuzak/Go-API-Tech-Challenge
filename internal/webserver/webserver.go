@@ -11,8 +11,8 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	_ "github.com/jackc/pgx/v5/stdlib"
 
-	"github.com/maya-kuzak/Go-API-Tech-Challenge/cmd/handlers"
-	"github.com/maya-kuzak/Go-API-Tech-Challenge/cmd/routes"
+	"github.com/maya-kuzak/Go-API-Tech-Challenge/internal/handlers"
+	"github.com/maya-kuzak/Go-API-Tech-Challenge/internal/routes"
 )
 
 func NewServer(db *sql.DB) {

@@ -61,6 +61,12 @@ func (h *RequestHandler) GetCourse(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *RequestHandler) UpdateCourse(w http.ResponseWriter, r *http.Request) {
+	// Ensure the handler is not nil
+	if h == nil || h.DB == nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
 	var course Course
 	id := chi.URLParam(r, "id")
 

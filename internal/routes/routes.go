@@ -3,7 +3,7 @@ package routes
 
 import (
 	"github.com/go-chi/chi/v5"
-	"github.com/maya-kuzak/Go-API-Tech-Challenge/cmd/handlers"
+	"github.com/maya-kuzak/Go-API-Tech-Challenge/internal/handlers"
 )
 
 func GetRoutes(r chi.Router, handler *handlers.RequestHandler) {

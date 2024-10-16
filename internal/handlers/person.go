@@ -2,8 +2,10 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
@@ -101,7 +103,7 @@ func (h *RequestHandler) GetPerson(w http.ResponseWriter, r *http.Request) {
 	//find courses for each person
 	courseRows, err := h.DB.Query("SELECT course_id FROM person_course WHERE person_id = $1", person.ID)
 	if err != nil {
-		http.Error(w, "Error fetching courses: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Error querying courses: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	defer courseRows.Close()
@@ -128,11 +130,13 @@ func (h *RequestHandler) GetPerson(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Update a given Person in the database based on name.
+// Update an existing Person in the database.
 func (h *RequestHandler) UpdatePerson(w http.ResponseWriter, r *http.Request) {
-	var updatedPerson CompletePerson
+	// Get path param
+	fullName := chi.URLParam(r, "name")
 
 	// Parse the JSON request body
+	var updatedPerson CompletePerson
 	if err := json.NewDecoder(r.Body).Decode(&updatedPerson); err != nil {
 		http.Error(w, "Invalid request payload: "+err.Error(), http.StatusBadRequest)
 		return
@@ -144,67 +148,63 @@ func (h *RequestHandler) UpdatePerson(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get path param
-	fullName := chi.URLParam(r, "name")
+	// Find the person ID based on the full name
+	var personID int
+	err := h.DB.QueryRow("SELECT id FROM person WHERE first_name || ' ' || last_name = $1", fullName).Scan(&personID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "Person not found", http.StatusNotFound)
+		} else {
+			http.Error(w, "Error finding person: "+err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
 
 	// Construct the SQL UPDATE query
 	query := `
         UPDATE person
         SET first_name = $1, last_name = $2, type = $3, age = $4
-        WHERE first_name || ' ' || last_name = $5
-        RETURNING id, first_name, last_name, type, age
+        WHERE id = $5
     `
-	args := []interface{}{updatedPerson.FirstName, updatedPerson.LastName, updatedPerson.Type, updatedPerson.Age, fullName}
+	args := []interface{}{updatedPerson.FirstName, updatedPerson.LastName, updatedPerson.Type, updatedPerson.Age, personID}
 
-	// Execute the UPDATE query and fetch the updated person
-	row := h.DB.QueryRow(query, args...)
-	err := row.Scan(&updatedPerson.ID, &updatedPerson.FirstName, &updatedPerson.LastName, &updatedPerson.Type, &updatedPerson.Age)
+	// Execute the UPDATE query
+	_, err = h.DB.Exec(query, args...)
 	if err != nil {
 		http.Error(w, "Error updating person: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	// Update courses for the person
-	_, err = h.DB.Exec("DELETE FROM person_course WHERE person_id = $1", updatedPerson.ID)
+	_, err = h.DB.Exec("DELETE FROM person_course WHERE person_id = $1", personID)
 	if err != nil {
 		http.Error(w, "Error deleting old courses: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	for _, courseID := range updatedPerson.Courses {
-		_, err := h.DB.Exec("INSERT INTO person_course (person_id, course_id) VALUES ($1, $2)", updatedPerson.ID, courseID)
+		// Check if the course_id exists in the course table
+		var exists bool
+		err := h.DB.QueryRow("SELECT EXISTS(SELECT 1 FROM course WHERE id = $1)", courseID).Scan(&exists)
+		if err != nil {
+			http.Error(w, "Error checking course existence: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if !exists {
+			http.Error(w, "Course ID does not exist: "+strconv.FormatUint(uint64(courseID), 10), http.StatusBadRequest)
+			return
+		}
+
+		_, err = h.DB.Exec("INSERT INTO person_course (person_id, course_id) VALUES ($1, $2)", personID, courseID)
 		if err != nil {
 			http.Error(w, "Error inserting new courses: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 	}
 
-	// Fetch the updated courses
-	courseRows, err := h.DB.Query("SELECT course_id FROM person_course WHERE person_id = $1", updatedPerson.ID)
-	if err != nil {
-		http.Error(w, "Error fetching courses: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	defer courseRows.Close()
-
-	updatedPerson.Courses = nil // Reset courses slice
-	for courseRows.Next() {
-		var courseID uint
-		err := courseRows.Scan(&courseID)
-		if err != nil {
-			http.Error(w, "Error scanning course ID: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		updatedPerson.Courses = append(updatedPerson.Courses, courseID)
-	}
-
-	if err := courseRows.Err(); err != nil {
-		http.Error(w, "Error iterating over courses: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
 	// Return the updated Person object as a JSON response
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(updatedPerson); err != nil {
 		http.Error(w, "Error encoding response: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -253,7 +253,7 @@ func (h *RequestHandler) CreatePerson(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if !exists {
-			http.Error(w, "Course ID does not exist: "+string(courseID), http.StatusBadRequest)
+			http.Error(w, "Course ID does not exist: "+strconv.FormatUint(uint64(courseID), 10), http.StatusBadRequest)
 			return
 		}
 
@@ -266,6 +266,7 @@ func (h *RequestHandler) CreatePerson(w http.ResponseWriter, r *http.Request) {
 
 	// Return the new Person object's ID as a JSON response
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
 	if err := json.NewEncoder(w).Encode(map[string]uint{"id": newPersonID}); err != nil {
 		http.Error(w, "Error encoding response: "+err.Error(), http.StatusInternalServerError)
 		return

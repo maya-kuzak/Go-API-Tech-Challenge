@@ -14,9 +14,12 @@ import (
 
 func Init() (*sql.DB, error) {
 
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file: ", err)
+	// Load the .env file only if it exists
+	if _, err := os.Stat(".env"); err == nil {
+		err := godotenv.Load()
+		if err != nil {
+			log.Fatal("Error loading .env file: ", err)
+		}
 	}
 
 	dbName := os.Getenv("DATABASE_NAME")
