@@ -44,12 +44,13 @@ func TestGetRoutes(t *testing.T) {
 	// Mock the database responses
 	mock.ExpectQuery("SELECT \\* FROM course").WillReturnRows(sqlmock.NewRows([]string{"id", "name"}).AddRow(1, "Course 1").AddRow(2, "Course 2"))
 	mock.ExpectQuery("SELECT \\* FROM course WHERE id = \\$1").WithArgs(1).WillReturnRows(sqlmock.NewRows([]string{"id", "name"}).AddRow(1, "Course 1"))
-	mock.ExpectQuery("SELECT id, first_name, last_name, type, age FROM person").WillReturnRows(sqlmock.NewRows([]string{"id", "first_name", "last_name", "type", "age"}).AddRow(1, "John", "Doe", "student", 25).AddRow(2, "Jane", "Doe", "professor", 30))
 
+	mock.ExpectQuery("SELECT id, first_name, last_name, type, age FROM person").WillReturnRows(sqlmock.NewRows([]string{"id", "first_name", "last_name", "type", "age"}).AddRow(1, "John", "Doe", "student", 25).AddRow(2, "Jane", "Doe", "professor", 30))
 	mock.ExpectQuery("SELECT course_id FROM person_course WHERE person_id = \\$1").
 		WithArgs(1).WillReturnRows(sqlmock.NewRows([]string{"course_id"}).AddRow(1).AddRow(2))
 	mock.ExpectQuery("SELECT course_id FROM person_course WHERE person_id = \\$1").
 		WithArgs(2).WillReturnRows(sqlmock.NewRows([]string{"course_id"}).AddRow(1).AddRow(3))
+
 	mock.ExpectQuery("SELECT id, first_name, last_name, type, age FROM person WHERE first_name \\|\\| ' ' \\|\\| last_name = \\$1").WithArgs("John Doe").WillReturnRows(sqlmock.NewRows([]string{"id", "first_name", "last_name", "type", "age"}).AddRow(1, "John", "Doe", "student", 25))
 	mock.ExpectQuery("SELECT course_id FROM person_course WHERE person_id = \\$1").WithArgs(1).WillReturnRows(sqlmock.NewRows([]string{"course_id"}).AddRow(1))
 
